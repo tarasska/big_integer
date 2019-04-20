@@ -32,7 +32,7 @@ big_integer::big_integer(int x) {
     if (x == INT_MIN) {
         digits.push_back(2147483648u);
     } else {
-        digits.push_back(abs(x));
+        digits.push_back(static_cast<digit_type>(abs(x)));
     }
 }
 
@@ -408,26 +408,25 @@ big_integer big_integer::operator-() const {
 big_integer &big_integer::operator=(big_integer const &other) = default;
 
 big_integer &big_integer::operator+=(big_integer const &rhs) {
-    big_integer b(rhs);
     if (sign < 0 && rhs.sign > 0) {
-        *this = b -= (-*this);
+        *this = big_integer(rhs) -= (-*this);
         return *this;
     }
-    if (sign > 0 && b.sign < 0) {
-        *this = *this -= (-b);
+    if (sign > 0 && rhs.sign < 0) {
+        *this = *this -= (-rhs);
         return *this;
     }
 
-    size_t small_size = std::min(digits.size(), b.digits.size());
-    size_t big_size = std::max(digits.size(), b.digits.size());
+    size_t small_size = std::min(digits.size(), rhs.digits.size());
+    size_t big_size = std::max(digits.size(), rhs.digits.size());
     std::vector<digit_type> buf(big_size);
     digit_type carry = 0;
     for (size_t i = 0; i < small_size; ++i) {
-        uint64_t sum = static_cast<uint64_t>(digits[i]) + b.digits[i] + carry;
+        uint64_t sum = static_cast<uint64_t>(digits[i]) + rhs.digits[i] + carry;
         buf[i] = static_cast<digit_type>(sum % base);
         carry = sum >= base ? 1 : 0;
     }
-    big_integer const &c = (big_size == digits.size()) ? *this : b;
+    big_integer const &c = (big_size == digits.size()) ? *this : rhs;
     for (size_t i = small_size; i < big_size; ++i) {
         uint64_t sum = uint64_t(c.digits[i]) + carry;
         buf[i] = static_cast<digit_type>(sum % base);
@@ -436,7 +435,7 @@ big_integer &big_integer::operator+=(big_integer const &rhs) {
     if (carry != 0) {
         buf.push_back(carry);
     }
-    *this = big_integer(buf, sign == 0 ? b.sign : sign);
+    *this = big_integer(buf, sign == 0 ? rhs.sign : sign);
     this->shrink_to_fit();
     return *this;
 }
